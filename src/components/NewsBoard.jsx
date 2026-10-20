@@ -4,33 +4,35 @@ import Newsitem from "./Newsitem";
 
 const NewsBoard = ({ category }) => {
   const [articles, setArticles] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const apiKey = import.meta.env.VITE_API_KEY;
-
-    const topic =
+    const searchTerm =
       !category || category === "general"
-        ? ""
-        : `&topic=${category}`;
+        ? "world news"
+        : category;
 
-    const url = `https://gnews.io/api/v4/top-headlines?lang=en${topic}&token=${apiKey}`;
+    const url = `https://freenewsapi.ai/v1/search?q=${encodeURIComponent(
+      searchTerm
+    )}&lang=en&size=20&sort=date`;
+
+    setLoading(true);
 
     fetch(url)
       .then((response) => {
         if (!response.ok) {
-          throw new Error(`News API error: ${response.status}`);
+          throw new Error(`API error: ${response.status}`);
         }
         return response.json();
       })
       .then((data) => {
-        const filteredArticles =
-          data.articles?.filter((article) => article.image) || [];
-        setArticles(filteredArticles);
+        setArticles(data.results || []);
       })
       .catch((error) => {
         console.error("Error fetching news:", error);
         setArticles([]);
-      });
+      })
+      .finally(() => setLoading(false));
   }, [category]);
 
   return (
@@ -39,10 +41,16 @@ const NewsBoard = ({ category }) => {
         Latest <span className="badge bg-danger">News</span>
       </h2>
 
+      {loading && <p className="text-center">Loading news...</p>}
+
+      {!loading && articles.length === 0 && (
+        <p className="text-center">No news available.</p>
+      )}
+
       <div className="news-container">
         {articles.map((news, index) => (
           <Newsitem
-            key={news.url || index}
+            key={news.id || news.url || index}
             title={news.title}
             description={news.description}
             src={news.image}
@@ -50,15 +58,8 @@ const NewsBoard = ({ category }) => {
           />
         ))}
       </div>
-
-      {articles.length === 0 && (
-        <p className="text-center mt-3">
-          No news articles available. Please try again later.
-        </p>
-      )}
     </div>
   );
 };
 
 export default NewsBoard;
-
